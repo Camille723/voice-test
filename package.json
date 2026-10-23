@@ -1,0 +1,12 @@
+{
+  "name": "renyin-voice-test",
+  "version": "1.0.0",
+  "description": "AI Assistant 语音输入动态反馈可用性测试原型",
+  "main": "serve.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node serve.js"
+  }
+}
