@@ -331,8 +331,12 @@
 
   @media (max-width:860px){
     body{padding:24px 12px 48px;}
-    .btn{min-width:96px;padding:0 18px;}
-    .controls{gap:10px;}
+    /* 窄屏下 16/9 会把卡片压到约 200px 高：stage 只剩几十像素，
+       导致麦克风按钮溢出压住状态栏/按钮，波形画布也被挤到看不见。
+       改为按视口宽度给出足够高度（约 4/5 竖屏比例）。 */
+    .card{aspect-ratio:auto;height:clamp(390px,108vw,470px);}
+    .controls{padding:0 10px;gap:8px;}
+    .btn{min-width:0;flex:0 1 116px;padding:0 12px;}
   }
 </style>
 </head>
