@@ -1,0 +1,14 @@
+# Render 部署配置
+services:
+  - type: web
+    name: renyin-voice-test
+    env: node
+    plan: free
+    rootDir: .
+    buildCommand: 'echo "no build needed"'
+    startCommand: node serve.js
+    envVars:
+      - key: BAIDU_API_KEY
+        value: g7uPAKUjN6A4encpKfhEQSSw
+      - key: BAIDU_SECRET_KEY
+        value: ARDdN1RObqrCxodniah9hPPGSp1opIFM
