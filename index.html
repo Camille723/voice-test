@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  /* 老年版大字模式：通过 elder.html 或 ?mode=elder 进入，样式在 <style> 末尾的 .elder 段落 */
+  if(/[?&]mode=elder(?:&|$)/.test(location.search)) document.documentElement.classList.add('elder');
+</script>
 <title>AI Assistant · 语音输入反馈可用性测试原型</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236366f1'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cg stroke='white' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M16 9v14M11 13v6M21 13v6M7 15v2M25 15v2'/%3E%3C/g%3E%3C/svg%3E" />
 <style>
@@ -338,6 +342,81 @@
     .controls{padding:0 10px;gap:8px;}
     .btn{min-width:0;flex:0 1 116px;padding:0 12px;}
   }
+
+  /* ===== 老年版（大字模式）：elder.html 或 ?mode=elder 进入，全站字号约 1.35 倍 ===== */
+  .elder .page-head h1{font-size:28px;line-height:1.35;}
+  .elder .page-head p{font-size:18px;line-height:1.8;}
+  .elder .page-head .tips{font-size:16px;padding:10px 20px;gap:16px;flex-wrap:wrap;justify-content:center;}
+  .elder .elder-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;
+    background:rgba(99,102,241,.12);color:var(--accent);font-size:15px;font-weight:650;}
+  .elder .file-warn{font-size:17px;}
+
+  .elder .consent-card{padding:26px 24px;}
+  .elder .cc-title{font-size:21px;}
+  .elder .cc-note{font-size:17px;line-height:1.9;}
+  .elder .cc-field label{font-size:17px;}
+  .elder .cc-field input,.elder .cc-field select{height:52px;font-size:18px;padding:0 14px;}
+  .elder .cc-submit{height:52px;font-size:18px;padding:0 28px;}
+  .elder .cc-filled-badge{font-size:18px;}
+  .elder .cc-modify{font-size:16px;}
+
+  .elder .scheme-tag{flex-wrap:wrap;gap:6px 12px;}
+  .elder .scheme-tag .no{font-size:15px;}
+  .elder .scheme-tag .name{font-size:18px;}
+  .elder .scheme-tag .desc{font-size:16px;line-height:1.6;}
+  .elder .task-prompt{padding:16px 18px;}
+  .elder .task-prompt .tp-label{font-size:17.5px;line-height:1.6;}
+  .elder .task-prompt .tp-list li{font-size:18px;line-height:1.8;}
+  .elder .task-prompt .tp-list .n{font-size:15.5px;}
+  .elder .task-prompt .tp-note{font-size:16.5px;line-height:1.7;}
+
+  .elder .card{aspect-ratio:auto;height:520px;}
+  .elder .topbar{flex:0 0 66px;}
+  .elder .brand-mark{width:30px;height:30px;}
+  .elder .brand-name{font-size:19px;}
+  .elder .entry .mic{width:96px;height:96px;}
+  .elder .entry .mic svg{width:40px;height:40px;}
+  .elder .entry .hint{font-size:18px;}
+  .elder .state-orb{width:124px;height:124px;}
+  .elder .status{flex:0 0 46px;font-size:18px;}
+  .elder .controls{flex:0 0 86px;}
+  .elder .btn{height:54px;font-size:18px;min-width:112px;padding:0 24px;}
+  .elder .caption{flex:0 0 92px;margin:0 18px 16px;padding:12px 16px;}
+  .elder .caption .cap-head{font-size:15px;}
+  .elder .caption .cap-text{font-size:19px;line-height:1.5;min-height:28px;}
+  .elder .caption .cap-text .placeholder{font-size:17px;}
+
+  .elder .questionnaire{padding:22px 20px 24px;}
+  .elder .q-head .t{font-size:20px;}
+  .elder .q-head .s{font-size:16px;}
+  .elder .q-item{padding:16px 0 14px;}
+  .elder .q-dim{font-size:17px;}
+  .elder .q-title{font-size:19px;line-height:1.7;}
+  .elder .q-scale{gap:14px 20px;margin-top:14px;}
+  .elder .q-opt{font-size:18px;gap:8px;}
+  .elder .q-opt .ring{width:20px;height:20px;border-width:2px;}
+  .elder .q-why{font-size:16px;line-height:1.7;}
+  .elder .q-done{font-size:16px;}
+  .elder .q-feedback .q-fb-title{font-size:19px;}
+  .elder .q-feedback .q-fb-hint{font-size:16px;line-height:1.7;}
+  .elder .q-feedback textarea{font-size:18px;min-height:120px;padding:12px 14px;}
+
+  .elder .survey-fab{font-size:17px;padding:14px 22px;}
+  .elder .survey-panel{width:390px;max-width:calc(100vw - 32px);max-height:70vh;}
+  .elder .sv-title{font-size:19px;}
+  .elder .sv-cloud{font-size:15px;}
+  .elder .sv-empty{font-size:16px;}
+  .elder .sv-head{font-size:16px;}
+  .elder .sv-head span{font-size:14px;}
+  .elder .sv-ans span{font-size:15px;}
+  .elder .sv-btn{font-size:16px;padding:12px 0;}
+  .elder .sv-row{font-size:16px;}
+  .elder .sv-prog,.elder .sv-sname{font-size:15px;}
+
+  .elder .footer-note{font-size:16px;}
+  .elder .eb-inner{font-size:16px;}
+  .elder .eb-time{font-size:15px;}
+  .elder .eb-retry{font-size:15px;padding:8px 16px;}
 </style>
 </head>
 <body>
@@ -949,13 +1028,16 @@ function attachQuestionnaire(root){
  * ===================================================================== */
 const SURVEY_KEY = 'renyin_survey_sets_v1';
 const PID_KEY = 'renyin_survey_pid_v1';
+/* 群体标记：老年版（elder）参与者 ID 以 E 开头，大学生版以 S 开头，便于后续按人群拆分 */
+const IS_ELDER = document.documentElement.classList.contains('elder');
+const GROUP_NAME = IS_ELDER ? '老年组' : '大学生组';
 let surveySets = [];
 try { surveySets = JSON.parse(localStorage.getItem(SURVEY_KEY) || '[]') || []; } catch (e) { surveySets = []; }
 let pid = '';
 try {
   pid = localStorage.getItem(PID_KEY);
-  if (!pid) { pid = 'P' + Math.random().toString(36).slice(2, 7).toUpperCase(); localStorage.setItem(PID_KEY, pid); }
-} catch (e) { pid = 'P-LOCAL'; }
+  if (!pid) { pid = (IS_ELDER?'E':'S') + Math.random().toString(36).slice(2, 7).toUpperCase(); localStorage.setItem(PID_KEY, pid); }
+} catch (e) { pid = (IS_ELDER?'E':'S') + '-LOCAL'; }
 
 /* ===== 被试信息 ===== */
 const PARTICIPANT_KEY = 'renyin_participant_v1';
@@ -1483,12 +1565,12 @@ function flashBtn(id,txt){
 
 function exportSurveyCSV(){
   const src = (cloudCache && cloudCache.length) ? cloudCache : surveySets;
-  const head=['参与者ID','姓名','性别','年龄','学历','是否就业','套编号','提交时间','方案','Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9','开放反馈'];
+  const head=['参与者ID','群体','姓名','性别','年龄','学历','是否就业','套编号','提交时间','方案','Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9','开放反馈'];
   const rows=[];
   src.forEach(st=>{
     SCHEMES.forEach(s=>{
       const a=st.schemes[s.no]||{};
-      rows.push([st.pid,st.name||'',st.gender||'',st.age||'',st.education||'',st.employed||'',st.setNo,st.time,s.no,...QUESTIONS.map((q,i)=>a['Q'+(i+1)]??''), a.feedback||'']);
+      rows.push([st.pid,String(st.pid||'').charAt(0)==='E'?'老年组':'大学生组',st.name||'',st.gender||'',st.age||'',st.education||'',st.employed||'',st.setNo,st.time,s.no,...QUESTIONS.map((q,i)=>a['Q'+(i+1)]??''), a.feedback||'']);
     });
   });
   const csv=[head,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
@@ -1983,6 +2065,11 @@ function resizeAll(){
 }
 
 SCHEMES.forEach(createController);
+/* 老年版：在页头加一枚标记，方便研究者确认被试打开的是哪个版本的链接 */
+if(IS_ELDER){
+  const tips = document.querySelector('.page-head .tips');
+  if(tips) tips.insertAdjacentHTML('beforeend','<span class="elder-badge">老年版 · 大字号</span>');
+}
 initConsentForm();
 initSurveyPanel();
 /* 页面打开后：不再预热本地 Whisper 引擎（改走百度云识别，零下载、零等待） */
