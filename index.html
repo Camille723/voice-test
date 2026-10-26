@@ -243,7 +243,7 @@
   .q-item + .q-item{border-top:1px dashed var(--line);}
   .q-dim{font-size:13px;font-weight:650;color:var(--accent);letter-spacing:.3px;}
   .q-title{font-size:14px;color:var(--ink);margin-top:4px;line-height:1.65;}
-  .q-scale{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
+  .q-scale{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
   .q-opt{
     display:inline-flex;align-items:center;gap:6px;border:none;background:transparent;cursor:pointer;
     font-family:inherit;font-size:13.5px;color:var(--ink-2);padding:2px 2px;transition:color .15s;
@@ -905,31 +905,34 @@ const QUESTIONS = [
   {dim:'⑥ 趣味性', q:'Q6. 该语音输入方式让我感觉有趣、有吸引力。', why:'研究意义：对应"趣味性"维度。'},
   {dim:'⑦ 情绪效价', q:'Q7. 使用该语音输入方式时，我感受到的情绪是积极的。（情绪效价：情绪是偏向愉悦、积极，还是不悦、消极）', why:'研究意义：测量情绪的方向（积极—消极）。'},
   {dim:'⑧ 唤醒度', q:'Q8. 使用该语音输入方式时，我的情绪被激发的程度较高。（唤醒度：情绪被激发的强烈程度，从平静放松到兴奋激动）', why:'研究意义：测量情绪被激活的强度（平静—激动）。'},
-  {dim:'⑨ 总体满意度', q:'Q9. 如果语音交互使用这种动效形式，我的总体满意度较高。', why:'研究意义：综合评价动效方案的总体接受度。'}
+  {dim:'⑨ 总体满意度', q:'Q9. 如果语音交互使用这种动效形式，我的总体满意度较高。', why:'研究意义：综合评价动效方案的总体接受度。'},
+  {dim:'⑩ 持续使用意愿', q:'Q10. 我愿意在今后的日常使用中继续使用这种语音输入形式。', why:'研究意义：测量长期使用意愿（行为意向），判断动效体验能否转化为持续使用。'}
 ];
+/* 七分量表每一分对应的程度 */
+const SCALE_LABELS = ['非常不同意','不同意','有点不同意','中立','有点同意','同意','非常同意'];
 
 function questionnaireHTML(scheme){
   return `
   <div class="questionnaire" data-scheme="${scheme.no}">
     <div class="q-head">
       <span class="t">方案评分问卷</span>
-      <span class="s">${scheme.no} · ${scheme.name}｜体验后请按真实感受打分：1 = 非常不同意，5 = 非常同意</span>
+      <span class="s">${scheme.no} · ${scheme.name}｜体验后请按真实感受打分：1 = 非常不同意，4 = 中立，7 = 非常同意</span>
     </div>
     ${QUESTIONS.map((it,qi)=>`
     <div class="q-item" data-q="${qi+1}">
       <div class="q-dim">${it.dim}</div>
       <div class="q-title">${it.q}</div>
       <div class="q-scale" role="radiogroup">
-        ${[1,2,3,4,5].map(v=>`<button type="button" class="q-opt" data-v="${v}" aria-label="${v} 分"><span>${v}</span><span class="ring"></span></button>`).join('')}
+        ${[1,2,3,4,5,6,7].map(v=>`<button type="button" class="q-opt" data-v="${v}" aria-label="${v} 分 · ${SCALE_LABELS[v-1]}" title="${v} · ${SCALE_LABELS[v-1]}"><span>${v}</span><span class="ring"></span></button>`).join('')}
       </div>
       <div class="q-why">${it.why}</div>
     </div>`).join('')}
     <div class="q-feedback">
-      <div class="q-fb-title">⑩ 开放反馈 <span style="color:#e5484d">*必填</span></div>
+      <div class="q-fb-title">⑪ 开放反馈 <span style="color:#e5484d">*必填</span></div>
       <div class="q-fb-hint">在使用本方案的语音输入过程中，您觉得有哪些不舒适的感觉？或有哪些可以改进的地方？请至少填写一点您的真实感受。</div>
       <textarea class="q-fb-input" data-scheme="${scheme.no}" placeholder="请输入您的真实感受和改进建议……"></textarea>
     </div>
-    <div class="q-done">✓ 本方案已全部填写完成（9 道评分题 + 开放反馈）</div>
+    <div class="q-done">✓ 本方案已全部填写完成（10 道评分题 + 开放反馈）</div>
   </div>`;
 }
 
@@ -1565,7 +1568,7 @@ function flashBtn(id,txt){
 
 function exportSurveyCSV(){
   const src = (cloudCache && cloudCache.length) ? cloudCache : surveySets;
-  const head=['参与者ID','群体','姓名','性别','年龄','学历','是否就业','套编号','提交时间','方案','Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9','开放反馈'];
+  const head=['参与者ID','群体','姓名','性别','年龄','学历','是否就业','套编号','提交时间','方案',...QUESTIONS.map((q,i)=>'Q'+(i+1)),'开放反馈'];
   const rows=[];
   src.forEach(st=>{
     SCHEMES.forEach(s=>{
