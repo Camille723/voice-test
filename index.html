@@ -533,12 +533,25 @@ const AudioHub = {
   async hold(){
     this.holders++;
     if(this.ctx) { if(this.ctx.state==='suspended') await this.ctx.resume(); return; }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true }
-    });
+    // iPhone Safari 不支持 autoGainControl，需要单独试探每条约束是否被接受
+    let stream = null;
+    const basicAudio = { echoCancellation:true, noiseSuppression:true };
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { ...basicAudio, autoGainControl:true }
+      });
+    }catch(_){
+      try{
+        stream = await navigator.mediaDevices.getUserMedia({ audio: basicAudio });
+      }catch(e2){
+        // 最后兜底：只请求 audio:true
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    }
     this.stream = stream;
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AC();
+    if(this.ctx.state === 'suspended'){ try{ await this.ctx.resume(); }catch(_){} }
     this.source = this.ctx.createMediaStreamSource(stream);
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 1024;
@@ -547,16 +560,67 @@ const AudioHub = {
     this.bytes = new Uint8Array(this.analyser.fftSize);
     this.freq = new Uint8Array(this.analyser.frequencyBinCount);
     this.chunks = [];
-    try{ this.recorder = new MediaRecorder(stream); this.recorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) this.chunks.push(e.data); }; }catch(_){ this.recorder = null; }
+    // iOS 14.5+ 才支持 MediaRecorder；老 iOS 会抛 TypeError，这里给兜底
+    try{ this.recorder = new MediaRecorder(stream); }catch(_){ this.recorder = null; }
+    if(this.recorder){
+      this.recorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) this.chunks.push(e.data); };
+    }
   },
-  startRecording(){ this.chunks = []; if(this.recorder && this.recorder.state==='inactive') try{ this.recorder.start(); }catch(_){} },
-  pauseRecording(){ if(this.recorder && this.recorder.state==='recording') try{ this.recorder.pause(); }catch(_){} },
-  resumeRecording(){ if(this.recorder && this.recorder.state==='paused') try{ this.recorder.resume(); }catch(_){} },
+  startRecording(){
+    if(!this.recorder){
+      // 老 iOS（<14.5）没有 MediaRecorder，改用 ScriptProcessor 手动采集 Float32
+      this._bufChunks = [];
+      if(!this._sp){
+        try{
+          const sp = this.ctx.createScriptProcessor(4096,1,1);
+          sp.onaudioprocess = (e)=>{
+            if(!this._recording) return;
+            const input = e.inputBuffer.getChannelData(0);
+            const cpy = new Float32Array(input.length);
+            cpy.set(input);
+            this._bufChunks.push(cpy);
+          };
+          this.source.connect(sp); sp.connect(this.ctx.destination);
+          this._sp = sp;
+        }catch(_){}
+      }
+      this._recording = true;
+      return;
+    }
+    this.chunks = [];
+    if(this.recorder.state==='inactive') try{ this.recorder.start(); }catch(_){}
+  },
+  pauseRecording(){
+    if(this.recorder && this.recorder.state==='recording') try{ this.recorder.pause(); }catch(_){}
+    else this._recording = false;
+  },
+  resumeRecording(){
+    if(this.recorder && this.recorder.state==='paused') try{ this.recorder.resume(); }catch(_){}
+    else this._recording = true;
+  },
   stopRecording(){
+    // ScriptProcessor 兜底路径
+    if(!this.recorder){
+      this._recording = false;
+      return new Promise(resolve=>{
+        // 把 Float32 chunks 合并成单一 Float32Array 并包装成 Blob（后续 finish 里 audioBlobToPcm16kMono 能识别 Float32 Blob）
+        let total = 0;
+        this._bufChunks.forEach(c=>total+=c.length);
+        const merged = new Float32Array(total);
+        let off=0;
+        this._bufChunks.forEach(c=>{ merged.set(c, off); off+=c.length; });
+        this._bufChunks = [];
+        // Float32 原生格式 Blob（type 标识方便后续解码）
+        const blob = new Blob([merged.buffer], {type:'audio/f32'});
+        resolve(blob);
+      });
+    }
     return new Promise((resolve)=>{
-      if(!this.recorder){ resolve(null); return; }
-      this.recorder.onstop = ()=>{ const blob = this.chunks.length ? new Blob(this.chunks, {type:this.chunks[0].type}) : null; this.chunks=[]; resolve(blob); };
-      if(this.recorder.state!=='inactive'){ try{ this.recorder.stop(); }catch(_){ resolve(null); } } else { resolve(null); }
+      if(this.recorder.state==='inactive'){ resolve(null); return; }
+      let done = false;
+      const finish = ()=>{ if(!done){ done=true; resolve(this.chunks.length? new Blob(this.chunks, {type:this.chunks[0].type}) : null); this.chunks=[]; } };
+      this.recorder.onstop = finish;
+      try{ this.recorder.stop(); }catch(_){ finish(); }
     });
   },
   release(){
@@ -780,16 +844,23 @@ function createCaption(card){
   }
 
   return {
-    begin(){
+    async begin(){
       baseText=''; interimText=''; mode='live';
       if(webSpeechBroken) useWebSpeech = false;
       setStateLabel();
+      try{ await AudioHub.hold(); }
+      catch(err){
+        const hint = (err && err.name==='NotAllowedError')
+          ? '麦克风权限被拒绝：请在手机「设置」→「Safari（或你用的浏览器）」里允许访问麦克风，然后重试。'
+          : '无法访问麦克风（'+(err&&err.name||err)+'）：请确认浏览器允许麦克风权限、且手机不是在微信/钉钉等内嵌浏览器里打开。';
+        render(hint);
+        return;
+      }
+      render('正在聆听……');
       if(useWebSpeech){
-        render('正在聆听……');
-        AudioHub.hold().then(()=>{ AudioHub.startRecording(); });
+        AudioHub.startRecording();
         startWebSpeech();
       }else{
-        render('正在聆听……');
         AudioHub.startRecording();
       }
     },
@@ -1341,6 +1412,12 @@ function trimSilence(pcm, sampleRate){
 /* 录音 Blob → 16kHz 单声道 Float32 PCM（Whisper 输入格式） */
 async function audioBlobToPcm16kMono(blob){
   const arrayBuf = await blob.arrayBuffer();
+  // ScriptProcessor 兜底路径直接返回裸 Float32 缓冲，跳过 decodeAudioData
+  if(blob.type === 'audio/f32'){
+    const f32 = new Float32Array(arrayBuf);
+    const origRate = AudioHub.ctx && AudioHub.ctx.sampleRate ? AudioHub.ctx.sampleRate : 44100;
+    return resampleFloat32(f32, origRate, 16000);
+  }
   const AC = window.AudioContext || window.webkitAudioContext;
   const ctx = new AC();
   try{
@@ -1353,6 +1430,20 @@ async function audioBlobToPcm16kMono(blob){
     const rendered = await offline.startRendering();
     return rendered.getChannelData(0).slice();
   }finally{ ctx.close().catch(()=>{}); }
+}
+/* 简单线性插值重采样：Float32 数组从 srcRate 到 dstRate */
+function resampleFloat32(src, srcRate, dstRate){
+  if(srcRate === dstRate) return src;
+  const ratio = srcRate / dstRate;
+  const out = new Float32Array(Math.max(1, Math.floor(src.length / ratio)));
+  for(let i=0;i<out.length;i++){
+    const srcIdx = i * ratio;
+    const a = Math.floor(srcIdx);
+    const b = Math.min(src.length-1, a+1);
+    const t = srcIdx - a;
+    out[i] = src[a] + (src[b]-src[a]) * t;
+  }
+  return out;
 }
 
 function draftIsDone(A){
