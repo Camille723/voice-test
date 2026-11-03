@@ -1148,12 +1148,21 @@ function setCloudStatus(type, msg){
   el.textContent = '☁ ' + msg;
 }
 async function cloudSaveSet(record){
-  if(!cloudConfigured()) return { ok:false, reason:'云端未配置' };
+  // 优先走同源 /api/submit 代理（避免手机浏览器拦截跨域 fetch 到 Supabase）
+  const body = JSON.stringify({ pid: record.pid, setno: record.setNo, time: record.time, schemes: record.schemes, name: record.name||'', gender: record.gender||'', age: record.age||'', education: record.education||'', employed: record.employed||'' });
+  try{
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    });
+    if(res.ok) return { ok:true };
+  }catch(_){ /* 同源代理不可用时（如 file://），fallback 到直连 */ }
   try{
     const res = await fetch(SB_CONFIG.url + '/rest/v1/surveyset', {
       method: 'POST',
       headers: { ...cloudHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({ pid: record.pid, setno: record.setNo, time: record.time, schemes: record.schemes, name: record.name||'', gender: record.gender||'', age: record.age||'', education: record.education||'', employed: record.employed||'' })
+      body: body
     });
     if(!res.ok) throw new Error('HTTP ' + res.status + ' ' + await res.text());
     return { ok:true };

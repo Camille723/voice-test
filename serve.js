@@ -18,6 +18,47 @@ const types = {
   '.svg': 'image/svg+xml'
 };
 
+/* ========== Supabase 数据提交代理 /api/submit ========== */
+const SB_URL = process.env.SUPABASE_URL || 'https://dwefkqmyedbkauaalgun.supabase.co';
+const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZWZrcW15ZWRia2F1YWFsZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDUwNjUsImV4cCI6MjEwNjEyMTA2NX0.HSHi6gUqpILjbBBz-y9yRQmgegiVO9H8p_TDKHzMrpE';
+
+function handleSubmit(req, res){
+  if(req.method !== 'POST'){ res.writeHead(405); res.end(); return; }
+  const chunks = [];
+  req.on('data', c => chunks.push(c));
+  req.on('end', ()=>{
+    let body; try{ body = JSON.parse(Buffer.concat(chunks).toString()); }catch(e){
+      res.writeHead(400, {'Content-Type':'application/json'});
+      return res.end(JSON.stringify({ ok:false, error:'Invalid JSON' }));
+    }
+    const upstream = https.request({
+      hostname: SB_URL.replace(/^https?:\/\//,''),
+      path: '/rest/v1/surveyset',
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        'Content-Length': Buffer.byteLength(JSON.stringify(body))
+      }
+    }, (upRes)=>{
+      let data = '';
+      upRes.on('data', c => data += c);
+      upRes.on('end', ()=>{
+        res.writeHead(upRes.statusCode, {'Content-Type':'application/json'});
+        res.end(data);
+      });
+    });
+    upstream.on('error', (e)=>{
+      res.writeHead(502, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok:false, error:e.message }));
+    });
+    upstream.write(JSON.stringify(body));
+    upstream.end();
+  });
+}
+
 /* ========== 百度语音识别 /stt 代理 ========== */
 let cfg = null;
 let baiduToken = null;   // { token: string, expireAt: timestamp_ms }
@@ -206,6 +247,7 @@ function proxyToHfMirror(req, res) {
 
 http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  if (urlPath.startsWith('/api/submit')) { handleSubmit(req, res); return; }
   if (urlPath.startsWith('/stt')) { handleStt(req, res); return; }
   if (urlPath.startsWith('/hf/')) { proxyToHfMirror(req, res); return; }
   let filePath = urlPath === '/' ? '/index.html' : urlPath;
