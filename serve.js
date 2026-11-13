@@ -23,6 +23,8 @@ const SB_URL = process.env.SUPABASE_URL || 'https://dwefkqmyedbkauaalgun.supabas
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3ZWZrcW15ZWRia2F1YWFsZ3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDUwNjUsImV4cCI6MjEwNjEyMTA2NX0.HSHi6gUqpILjbBBz-y9yRQmgegiVO9H8p_TDKHzMrpE';
 
 function handleSubmit(req, res){
+  cors(res);
+  if(req.method === 'OPTIONS'){ res.writeHead(204); res.end(); return; }
   if(req.method !== 'POST'){ res.writeHead(405); res.end(); return; }
   const chunks = [];
   req.on('data', c => chunks.push(c));
@@ -139,7 +141,14 @@ function callBaiduSTT(pcmBuffer){
   });
 }
 
+function cors(res){
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
 function handleStt(req, res){
+  cors(res);
+  if(req.method === 'OPTIONS'){ res.writeHead(204); res.end(); return; }
   if(!cfg){
     res.writeHead(401, {'Content-Type':'application/json'});
     return res.end(JSON.stringify({ error: '未配置百度 API Key，请编辑 stt-config.json' }));
@@ -248,7 +257,7 @@ function proxyToHfMirror(req, res) {
 http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath.startsWith('/api/submit')) { handleSubmit(req, res); return; }
-  if (urlPath.startsWith('/stt')) { handleStt(req, res); return; }
+  if (urlPath.startsWith('/api/stt') || urlPath.startsWith('/stt')) { handleStt(req, res); return; }
   if (urlPath.startsWith('/hf/')) { proxyToHfMirror(req, res); return; }
   let filePath = urlPath === '/' ? '/index.html' : urlPath;
   const full = path.join(root, filePath);

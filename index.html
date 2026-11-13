@@ -507,10 +507,26 @@
 
 <script>
 /* =====================================================================
- *  百度云语音识别 —— 通过本地/远端 serve.js 的 /stt 代理调用
- *  本机：node serve.js → http://localhost:8765
- *  部署：上传 Railway/Render → 设置环境变量 BAIDU_API_KEY / BAIDU_SECRET_KEY
+ *  API 基础 URL —— 自动检测部署环境
+ *  - 同源（Render / localhost）：用 /api/stt, /api/submit
+ *  - 纯静态托管（Netlify Drop / GitHub Pages）：回退到 Render 后端
  * ===================================================================== */
+const API_BASE = (function(){
+  try {
+    const host = window.location.hostname;
+    // 纯静态托管（没有后端代理）→ 回退 Render 后端
+    if (host.endsWith('.netlify.app') ||
+        host.endsWith('.pages.dev') ||
+        host.endsWith('.github.io') ||
+        host.endsWith('.surge.sh') ||
+        host.startsWith('localhost') ||
+        host === '127.0.0.1') {
+      return 'https://voice-test-9zt3.onrender.com';
+    }
+  } catch(_){}
+  return ''; // 同源
+})();
+function apiUrl(path){ return API_BASE + path; }
 
 /* =====================================================================
  *  图标
@@ -909,7 +925,7 @@ function createCaption(card){
           int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
         const t0 = Date.now();
-        const resp = await fetch('/stt', { method:'POST', body: int16.buffer });
+        const resp = await fetch(apiUrl('/api/stt'), { method:'POST', body: int16.buffer });
         const j = await resp.json();
         const ms = Date.now() - t0;
         hideCloudSTT();
@@ -1151,7 +1167,7 @@ async function cloudSaveSet(record){
   // 优先走同源 /api/submit 代理（避免手机浏览器拦截跨域 fetch 到 Supabase）
   const body = JSON.stringify({ pid: record.pid, setno: record.setNo, time: record.time, schemes: record.schemes, name: record.name||'', gender: record.gender||'', age: record.age||'', education: record.education||'', employed: record.employed||'' });
   try{
-    const res = await fetch('/api/submit', {
+    const res = await fetch(apiUrl('/api/submit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body
