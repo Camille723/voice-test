@@ -305,6 +305,41 @@
   .sv-prog{font-size:11px;color:var(--ink-3);}
   .sv-sname{font-size:11px;color:var(--ink-2);font-weight:600;flex-basis:100%;}
 
+  /* ===== 页面末尾的提交问卷区 ===== */
+  .final-submit{
+    max-width:1120px;margin:38px auto 0;padding:24px 20px 26px;border-radius:20px;
+    background:#fff;border:1px solid rgba(17,24,39,.08);
+    box-shadow:0 20px 48px -30px rgba(15,23,42,.32);text-align:center;
+  }
+  .fs-head{display:flex;align-items:baseline;justify-content:center;gap:12px;flex-wrap:wrap;}
+  .fs-title{font-size:17px;font-weight:700;color:var(--ink);}
+  .fs-progress{font-size:13px;color:var(--ink-3);}
+  .fs-dots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0 20px;}
+  .fs-dot{
+    display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3);
+    background:#f4f6fa;border-radius:999px;padding:5px 11px;
+  }
+  .fs-dot i{width:7px;height:7px;border-radius:50%;background:#cfd4e0;display:block;flex-shrink:0;}
+  .fs-dot.ok{background:rgba(16,185,129,.1);color:#0f9d70;font-weight:600;}
+  .fs-dot.ok i{background:var(--ok);}
+  .fs-btn{
+    appearance:none;border:none;cursor:pointer;font-family:inherit;
+    width:100%;max-width:420px;padding:16px 0;border-radius:999px;
+    font-size:17px;font-weight:700;color:#fff;background:var(--grad);
+    box-shadow:0 16px 34px -18px rgba(79,70,229,.7);
+    transition:transform .15s,opacity .2s;
+  }
+  .fs-btn:hover{transform:translateY(-1px);}
+  .fs-btn:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+  .fs-status{margin-top:14px;font-size:13px;line-height:1.7;color:var(--ink-3);}
+  .fs-status.ok{color:var(--ok);font-weight:600;}
+  .fs-status.err{color:#e11d48;font-weight:600;}
+  .fs-retry{
+    margin-top:12px;appearance:none;border:1.5px solid #e3e6ee;background:#fff;border-radius:999px;
+    padding:10px 22px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;font-family:inherit;
+  }
+  .fs-retry:hover{border-color:#cfd4e0;}
+
   .footer-note{max-width:1120px;margin:26px auto 0;text-align:center;font-size:12px;color:var(--ink-3);line-height:1.8;}
 
   /* ===== 本地识别引擎顶部状态条（下载进度 / 计时 / 卡死 / 重试） ===== */
@@ -413,6 +448,14 @@
   .elder .sv-row{font-size:16px;}
   .elder .sv-prog,.elder .sv-sname{font-size:15px;}
 
+  .elder .final-submit{padding:28px 18px 30px;}
+  .elder .fs-title{font-size:22px;}
+  .elder .fs-progress{font-size:17px;}
+  .elder .fs-dot{font-size:16px;padding:8px 13px;}
+  .elder .fs-btn{font-size:20px;padding:20px 0;}
+  .elder .fs-status{font-size:17px;}
+  .elder .fs-retry{font-size:17px;padding:13px 24px;}
+
   .elder .footer-note{font-size:16px;}
   .elder .eb-inner{font-size:16px;}
   .elder .eb-time{font-size:15px;}
@@ -502,6 +545,17 @@
 </div>
 
 <main class="stack" id="stack"><!-- 卡片由 JS 统一生成，保证布局一致 --></main>
+
+<section class="final-submit" id="final-submit">
+  <div class="fs-head">
+    <span class="fs-title">📮 提交问卷</span>
+    <span class="fs-progress" id="fs-progress">已完成 0 / 7 个方案</span>
+  </div>
+  <div class="fs-dots" id="fs-dots"></div>
+  <button type="button" class="fs-btn" id="fs-btn">提交问卷并上传云端</button>
+  <div class="fs-status" id="fs-status">7 个方案全部填写完成后，请点击上方按钮提交，数据会自动上传到云端。</div>
+  <button type="button" class="fs-retry" id="fs-retry" hidden>重新上传上一份数据</button>
+</section>
 
 <p class="footer-note">语音音量与波形通过本地麦克风实时分析（Web Audio API）；语音识别使用百度智能云语音识别 API（<span style="color:#10b981;font-weight:600">零下载、零安装、打开即识别</span>）。<br/>把本 HTML 文件直接发给被试，或托管到任意静态托管（GitHub Pages / Netlify / Vercel）即可使用。<br/>使用前需在代码顶部的 <code>BAIDU_STT</code> 对象中填入百度 API Key / Secret Key（免费额度：每月 5 万次短语音识别）。</p>
 
@@ -1480,7 +1534,31 @@ function draftDoneCount(){
   return SCHEMES.filter(s=>draftIsDone(surveyDrafts[s.no])).length;
 }
 
+/* ===== 页面末尾的提交区：进度 + 提交按钮状态 ===== */
+let submitting = false;
+function setFinalStatus(type, msg){
+  const el = document.getElementById('fs-status');
+  if(!el) return;
+  el.className = 'fs-status ' + (type || '');
+  el.textContent = msg;
+}
+function renderFinalSubmit(){
+  const box = document.getElementById('final-submit');
+  if(!box) return;
+  const done = draftDoneCount();
+  document.getElementById('fs-progress').textContent = '已完成 ' + done + ' / ' + SCHEMES.length + ' 个方案';
+  const dots = SCHEMES.map(s=>{
+    const ok = draftIsDone(surveyDrafts[s.no]);
+    return '<span class="fs-dot' + (ok ? ' ok' : '') + '"><i></i>' + s.no + '</span>';
+  }).join('');
+  document.getElementById('fs-dots').innerHTML = dots;
+  const btn = document.getElementById('fs-btn');
+  btn.disabled = submitting;
+  btn.textContent = submitting ? '正在上传到云端……' : '提交问卷并上传云端';
+}
+
 function renderSurveyPanel(){
+  renderFinalSubmit();
   const list=document.getElementById('survey-list');
   const status=document.getElementById('sv-status');
   const n=document.getElementById('sv-n');
@@ -1520,7 +1598,9 @@ function renderSurveyPanel(){
 }
 
 function submitSurveySet(){
+  if(submitting) return;
   if(!participantReady()){
+    setFinalStatus('err', '请先在页面顶部填写并确认被试信息（姓名、性别、年龄、学历、是否就业），再提交问卷。');
     alert('请先在页面顶部填写并确认被试信息（姓名、性别、年龄、学历、是否就业），再提交问卷。');
     document.getElementById('consent-card')?.scrollIntoView({behavior:'smooth', block:'center'});
     return;
@@ -1538,6 +1618,7 @@ function submitSurveySet(){
       }
       return null;
     }).filter(Boolean);
+    setFinalStatus('err', '还有 ' + (SCHEMES.length - draftDoneCount()) + ' 个方案未填写完整，无法提交：' + tips.join('；'));
     alert('还有方案未填写完整，无法提交：\n\n' + tips.join('\n') + '\n\n请补全后再提交（开放反馈为必填项）。');
     return;
   }
@@ -1555,15 +1636,7 @@ function submitSurveySet(){
   saveSurveySets();
   const rec = surveySets[surveySets.length-1];
   console.log('[问卷] '+pid+' 第'+rec.setNo+'套已提交并保存到本机');
-  cloudSaveSet(rec).then(r=>{
-    if(r.ok){
-      setCloudStatus('ok','云端同步成功（研究者可在云端查看全部数据）');
-      console.log('[问卷] 云端同步成功');
-    }else{
-      setCloudStatus('err','云端同步失败：'+r.reason+'（已保存本机，可点「导出 CSV」回传）');
-      exportSurveyCSV();
-    }
-  });
+  /* 清空界面上的作答，避免同一份数据被重复提交 */
   document.querySelectorAll('.questionnaire').forEach(box=>{
     box.querySelectorAll('.q-opt.sel').forEach(b=>b.classList.remove('sel'));
     box.classList.remove('all-answered');
@@ -1573,7 +1646,40 @@ function submitSurveySet(){
     if(ta) ta.value='';
   });
   Object.keys(surveyDrafts).forEach(k=>{ surveyDrafts[k]={}; });
-  renderSurveyPanel();
+  uploadRecord(rec);
+}
+
+/* 上传一份问卷到云端：显式反馈上传中 / 成功 / 失败，失败可重试 */
+let lastPendingRecord = null;
+function uploadRecord(rec){
+  if(submitting) return;
+  submitting = true;
+  renderFinalSubmit();
+  setFinalStatus('', '正在上传到云端，请稍候……');
+  const retry = document.getElementById('fs-retry');
+  if(retry) retry.hidden = true;
+  cloudSaveSet(rec).then(r=>{
+    if(r.ok){
+      lastPendingRecord = null;
+      setCloudStatus('ok','云端同步成功（研究者可在云端查看全部数据）');
+      setFinalStatus('ok', '✅ 提交成功！你的问卷已上传到云端，感谢参与，可以关闭本页面了。');
+      console.log('[问卷] 云端同步成功');
+    }else{
+      lastPendingRecord = rec;
+      setCloudStatus('err','云端同步失败：'+r.reason+'（已保存本机，可点「导出 CSV」回传）');
+      setFinalStatus('err', '⚠ 上传失败：' + r.reason + '（数据已暂存在本机）。请点击下方「重新上传上一份数据」再试一次。');
+      if(retry) retry.hidden = false;
+      exportSurveyCSV();
+    }
+  }).catch(e=>{
+    lastPendingRecord = rec;
+    setFinalStatus('err', '⚠ 上传失败：' + ((e && e.message) || e) + '。请点击下方「重新上传上一份数据」再试一次。');
+    if(retry) retry.hidden = false;
+  }).then(()=>{
+    submitting = false;
+    renderFinalSubmit();
+    renderSurveyPanel();
+  });
 }
 
 /* ===== 被试信息表单 ===== */
@@ -1671,6 +1777,16 @@ function initSurveyPanel(){
   setCloudStatus(cloudConfigured() ? 'ok' : '', cloudConfigured()
     ? '云端已配置：提交后自动汇总到云端'
     : '云端未配置（见 index.html 内 SB_CONFIG 填写说明）：数据仅保存在本机');
+  /* 页面末尾的提交区 */
+  const fsBtn = document.getElementById('fs-btn');
+  if(fsBtn) fsBtn.addEventListener('click', submitSurveySet);
+  const fsRetry = document.getElementById('fs-retry');
+  if(fsRetry) fsRetry.addEventListener('click', ()=>{
+    if(!lastPendingRecord){ setFinalStatus('err','没有待上传的数据。'); return; }
+    uploadRecord(lastPendingRecord);
+  });
+  const fsStatus0 = document.getElementById('fs-status');
+  if(fsStatus0) fsStatus0.textContent = SCHEMES.length + ' 个方案全部填写完成后，请点击上方按钮提交，数据会自动上传到云端。';
   renderSurveyPanel();
 }
 
